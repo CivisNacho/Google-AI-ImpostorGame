@@ -623,10 +623,15 @@ export default function App() {
                     <h2 className="text-3xl font-extrabold font-display">{currentPlayer.name}</h2>
                   </div>
 
-                  <div className={cn(
-                    "w-full p-6 rounded-[24px] border-2 border-dashed flex flex-col items-center gap-4",
-                    gameState.theme === 'dark' ? "bg-[#1C1B1F] border-[#49454F]" : "bg-white border-[#CAC4D0]"
-                  )}>
+                  <div 
+                    onClick={toggleReveal}
+                    className={cn(
+                      "w-full p-6 rounded-[24px] border-2 border-dashed flex flex-col items-center gap-4 cursor-pointer transition-all active:scale-95",
+                      gameState.theme === 'dark' 
+                        ? "bg-[#1C1B1F] border-[#49454F] hover:bg-[#2B2930]" 
+                        : "bg-white border-[#CAC4D0] hover:bg-gray-50"
+                    )}
+                  >
                     {gameState.revealedToCurrent ? (
                       <motion.div 
                         initial={{ y: 10, opacity: 0 }}
@@ -649,26 +654,26 @@ export default function App() {
                             {t.dontLetThemKnow}
                           </p>
                         )}
+                        <p className={cn("mt-6 text-[10px] uppercase tracking-widest opacity-50 font-bold", gameState.theme === 'dark' ? "text-[#D0BCFF]" : "text-[#6750A4]")}>
+                          {t.hideWord}
+                        </p>
                       </motion.div>
                     ) : (
-                      <p className={cn("font-medium", gameState.theme === 'dark' ? "text-[#CAC4D0]" : "text-[#49454F]")}>
-                        {t.clickToReveal}
-                      </p>
+                      <div className="flex flex-col items-center gap-4 py-4">
+                        <div className={cn(
+                          "w-16 h-16 rounded-full flex items-center justify-center",
+                          gameState.theme === 'dark' ? "bg-[#49454F]/30" : "bg-[#EADDFF]/30"
+                        )}>
+                          <Eye className={cn("w-8 h-8", gameState.theme === 'dark' ? "text-[#D0BCFF]" : "text-[#6750A4]")} />
+                        </div>
+                        <p className={cn("font-bold text-lg text-center", gameState.theme === 'dark' ? "text-[#D0BCFF]" : "text-[#6750A4]")}>
+                          {t.clickToReveal}
+                        </p>
+                      </div>
                     )}
                   </div>
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3">
-                  <Button 
-                    onClick={toggleReveal}
-                    variant="outline"
-                    className={cn(
-                      "w-full h-14 rounded-full font-bold",
-                      gameState.theme === 'dark' ? "border-[#938F99] text-[#D0BCFF]" : "border-[#79747E] text-[#6750A4]"
-                    )}
-                  >
-                    {gameState.revealedToCurrent ? <EyeOff className="mr-2" /> : <Eye className="mr-2" />}
-                    {gameState.revealedToCurrent ? t.hideWord : t.revealWord}
-                  </Button>
                   <Button 
                     disabled={!gameState.revealedToCurrent}
                     onClick={nextPlayer}
@@ -895,14 +900,6 @@ export default function App() {
         </AnimatePresence>
 
         {/* Footer Info */}
-        <footer className="mt-auto py-4 sm:py-8 text-center shrink-0">
-          <p className={cn(
-            "text-[9px] sm:text-[10px] font-medium uppercase tracking-[0.2em]",
-            gameState.theme === 'dark' ? "text-[#CAC4D0]" : "text-[#49454F]"
-          )}>
-            Material 3 • Local Multiplayer
-          </p>
-        </footer>
       </div>
 
       {/* Custom Category Popup */}
