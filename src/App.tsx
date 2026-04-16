@@ -55,7 +55,7 @@ const TRANSLATIONS = {
     duplicateCategory: 'Category already exists!',
     emptyFields: 'Please fill all fields',
     startGame: 'Start Game',
-    generating: 'Generating...',
+    generating: 'Starting...',
     noPlayers: 'No players added yet',
     passPhone: 'Pass the phone',
     handTo: 'Hand it to the player below',
@@ -84,8 +84,16 @@ const TRANSLATIONS = {
     scoreboard: 'Scoreboard:',
     playAgain: 'Play Again',
     pts: 'pts',
+    howToPlay: 'How to Play',
+    objective: 'Objective',
+    scoring: 'Scoring',
+    objectiveDesc: 'The secret word is shown to everyone except the Impostor. The Impostor must blend in and guess the word, while others must identify the Impostor.',
+    howToPlayStep1: '1. Pass the phone to each player to reveal their secret word or Impostor role.',
+    howToPlayStep2: '2. Once everyone knows their role, take turns describing the word with one single word or short phrase.',
+    howToPlayStep3: '3. After the discussion, everyone points at the person they suspect is the Impostor on the count of three.',
+    scoringDesc: 'If the Impostor is caught, everyone else gets 1 point. If the Impostor escapes or guesses the word correctly, the Impostor gets 1 point.',
+    close: 'Close',
     categories: {
-      Personality: 'Personality',
       Object: 'Object',
       Idea: 'Idea',
       Place: 'Place',
@@ -113,7 +121,7 @@ const TRANSLATIONS = {
     duplicateCategory: '¡Esa categoría ya existe!',
     emptyFields: 'Por favor, rellena todos los campos',
     startGame: 'Empezar Juego',
-    generating: 'Generando...',
+    generating: 'Empezando...',
     noPlayers: 'No hay jugadores aún',
     passPhone: 'Pasa el teléfono',
     handTo: 'Entrégalo al siguiente jugador',
@@ -142,6 +150,15 @@ const TRANSLATIONS = {
     scoreboard: 'Puntuación:',
     playAgain: 'Jugar de Nuevo',
     pts: 'pts',
+    howToPlay: 'Cómo Jugar',
+    objective: 'Objetivo',
+    scoring: 'Puntuación',
+    objectiveDesc: 'La palabra secreta se muestra a todos excepto al Impostor. El Impostor debe mezclarse y adivinar la palabra, mientras que los demás deben identificar al Impostor.',
+    howToPlayStep1: '1. Pasen el teléfono a cada jugador para ver su palabra secreta o su rol de Impostor.',
+    howToPlayStep2: '2. Una vez que todos sepan su rol, tomen turnos describiendo la palabra con una sola palabra o frase corta.',
+    howToPlayStep3: '3. Después de la discusión, todos señalan a la persona que sospechan que es el Impostor a la cuenta de tres.',
+    scoringDesc: 'Si el Impostor es atrapado, todos los demás obtienen 1 punto. Si el Impostor escapa o adivina la palabra correctamente, el Impostor obtiene 1 punto.',
+    close: 'Cerrar',
     categories: {
       Personality: 'Personalidad',
       Object: 'Objeto',
@@ -156,19 +173,50 @@ const TRANSLATIONS = {
 };
 
 export default function App() {
-  const [gameState, setGameState] = useState<GameState>({
-    players: [],
-    status: 'setup',
-    currentWord: '',
-    impostorIds: [],
-    currentPlayerIndex: 0,
-    revealedToCurrent: false,
-    hasRevealedOnce: false,
-    revealOrder: [],
-    category: 'Object',
-    language: 'en',
-    theme: 'dark',
-    customCategories: {},
+  const [gameState, setGameState] = useState<GameState>(() => {
+    const saved = typeof window !== 'undefined' ? localStorage.getItem('impostor_app_state') : null;
+    let initialTheme: 'light' | 'dark' = 'dark';
+    
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      initialTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        return {
+          players: parsed.players || [],
+          status: 'setup',
+          currentWord: '',
+          impostorIds: [],
+          currentPlayerIndex: 0,
+          revealedToCurrent: false,
+          hasRevealedOnce: false,
+          revealOrder: [],
+          category: 'Object',
+          language: parsed.language || 'en',
+          theme: parsed.theme || initialTheme,
+          customCategories: parsed.customCategories || {},
+        };
+      } catch (e) {
+        console.error("Failed to parse saved state");
+      }
+    }
+
+    return {
+      players: [],
+      status: 'setup',
+      currentWord: '',
+      impostorIds: [],
+      currentPlayerIndex: 0,
+      revealedToCurrent: false,
+      hasRevealedOnce: false,
+      revealOrder: [],
+      category: 'Object',
+      language: 'en',
+      theme: initialTheme,
+      customCategories: {},
+    };
   });
 
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -179,26 +227,15 @@ export default function App() {
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [newCatName, setNewCatName] = useState('');
   const [newCatWords, setNewCatWords] = useState('');
+  
+  // Rules Modal State
+  const [isRulesOpen, setIsRulesOpen] = useState(false);
 
   const t = TRANSLATIONS[gameState.language];
 
-  // Load state from localStorage on mount
+  // Load state from localStorage on mount - Handled in lazy initializer now
   useEffect(() => {
-    const saved = localStorage.getItem('impostor_app_state');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        setGameState(prev => ({ 
-          ...prev, 
-          players: parsed.players || [],
-          language: parsed.language || 'en',
-          theme: parsed.theme || 'dark',
-          customCategories: parsed.customCategories || {}
-        }));
-      } catch (e) {
-        console.error("Failed to parse saved state");
-      }
-    }
+    // We still keep this for any potential side effects or sync needs
   }, []);
 
   // Save state to localStorage
@@ -396,6 +433,16 @@ export default function App() {
         
         {/* Header */}
         <header className="flex flex-col items-center gap-1 sm:gap-2 mt-2 sm:mt-4 mb-1 sm:mb-2 relative shrink-0">
+          <div className="absolute top-0 left-0">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setIsRulesOpen(true)}
+              className="rounded-full hover:bg-[#6750A4]/10"
+            >
+              <HelpCircle className="w-5 h-5 text-[#6750A4]" />
+            </Button>
+          </div>
           <div className="absolute top-0 right-0 flex gap-2">
             <Button 
               variant="ghost" 
@@ -1000,6 +1047,75 @@ export default function App() {
                     {t.submit}
                   </Button>
                 </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* Rules Modal */}
+        {isRulesOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className={cn(
+                "w-full max-w-md rounded-[32px] overflow-hidden shadow-2xl",
+                gameState.theme === 'dark' ? "bg-[#2B2930] text-[#E6E1E5]" : "bg-[#FEF7FF] text-[#1D1B20]"
+              )}
+            >
+              <div className="p-6 sm:p-8 flex flex-col gap-6 max-h-[80vh] overflow-y-auto">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-2xl font-black font-display">{t.howToPlay}</h2>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setIsRulesOpen(false)}
+                    className="rounded-full"
+                  >
+                    <X className="w-6 h-6" />
+                  </Button>
+                </div>
+
+                <div className="space-y-6">
+                  <section className="space-y-2">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-[#6750A4] dark:text-[#D0BCFF]">
+                      {t.objective}
+                    </h3>
+                    <p className="text-sm leading-relaxed opacity-90">
+                      {t.objectiveDesc}
+                    </p>
+                  </section>
+
+                  <section className="space-y-3">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-[#6750A4] dark:text-[#D0BCFF]">
+                      {t.howToPlay}
+                    </h3>
+                    <div className="space-y-3">
+                      <p className="text-sm leading-relaxed opacity-90">{t.howToPlayStep1}</p>
+                      <p className="text-sm leading-relaxed opacity-90">{t.howToPlayStep2}</p>
+                      <p className="text-sm leading-relaxed opacity-90">{t.howToPlayStep3}</p>
+                    </div>
+                  </section>
+
+                  <section className="space-y-2">
+                    <h3 className="text-sm font-black uppercase tracking-widest text-[#6750A4] dark:text-[#D0BCFF]">
+                      {t.scoring}
+                    </h3>
+                    <p className="text-sm leading-relaxed opacity-90">
+                      {t.scoringDesc}
+                    </p>
+                  </section>
+                </div>
+
+                <Button 
+                  onClick={() => setIsRulesOpen(false)}
+                  className={cn(
+                    "w-full h-12 rounded-full font-bold mt-4",
+                    gameState.theme === 'dark' ? "bg-[#D0BCFF] text-[#381E72]" : "bg-[#6750A4] text-white"
+                  )}
+                >
+                  {t.close}
+                </Button>
               </div>
             </motion.div>
           </div>
