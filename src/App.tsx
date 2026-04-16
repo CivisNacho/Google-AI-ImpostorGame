@@ -163,6 +163,8 @@ export default function App() {
     impostorIds: [],
     currentPlayerIndex: 0,
     revealedToCurrent: false,
+    hasRevealedOnce: false,
+    revealOrder: [],
     category: 'Object',
     language: 'en',
     theme: 'dark',
@@ -260,24 +262,30 @@ export default function App() {
     
     const shuffledIds = [...gameState.players].sort(() => Math.random() - 0.5).map(p => p.id);
     const impostorIds = shuffledIds.slice(0, numImpostors);
+    
+    // Randomize reveal order
+    const revealOrder = [...gameState.players].sort(() => Math.random() - 0.5).map(p => p.id);
 
     setGameState(prev => ({
       ...prev,
       status: 'assigning',
       currentWord: word,
       impostorIds,
+      revealOrder,
       currentPlayerIndex: 0,
       revealedToCurrent: false,
+      hasRevealedOnce: false,
     }));
     setIsLoading(false);
   };
 
   const nextPlayer = () => {
-    if (gameState.currentPlayerIndex < gameState.players.length - 1) {
+    if (gameState.currentPlayerIndex < gameState.revealOrder.length - 1) {
       setGameState(prev => ({
         ...prev,
         currentPlayerIndex: prev.currentPlayerIndex + 1,
         revealedToCurrent: false,
+        hasRevealedOnce: false,
       }));
     } else {
       setGameState(prev => ({
@@ -288,7 +296,11 @@ export default function App() {
   };
 
   const toggleReveal = () => {
-    setGameState(prev => ({ ...prev, revealedToCurrent: !prev.revealedToCurrent }));
+    setGameState(prev => ({ 
+      ...prev, 
+      revealedToCurrent: !prev.revealedToCurrent,
+      hasRevealedOnce: true 
+    }));
   };
 
   const finishRound = (impostorWon: boolean) => {
@@ -372,7 +384,7 @@ export default function App() {
     });
   };
 
-  const currentPlayer = gameState.players[gameState.currentPlayerIndex];
+  const currentPlayer = gameState.players.find(p => p.id === gameState.revealOrder[gameState.currentPlayerIndex]);
   const isImpostor = currentPlayer && gameState.impostorIds.includes(currentPlayer.id);
 
   return (
@@ -605,7 +617,7 @@ export default function App() {
                 "rounded-[28px] border-none shadow-lg overflow-hidden",
                 gameState.theme === 'dark' ? "bg-[#2B2930]" : "bg-[#F7F2FA]"
               )}>
-                <div className={cn("h-2", gameState.theme === 'dark' ? "bg-[#D0BCFF]" : "bg-[#6750A4]")} style={{ width: `${((gameState.currentPlayerIndex + 1) / gameState.players.length) * 100}%` }} />
+                <div className={cn("h-2", gameState.theme === 'dark' ? "bg-[#D0BCFF]" : "bg-[#6750A4]")} style={{ width: `${((gameState.currentPlayerIndex + 1) / gameState.revealOrder.length) * 100}%` }} />
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-display">{t.passPhone}</CardTitle>
                   <CardDescription className={gameState.theme === 'dark' ? "text-[#CAC4D0]" : ""}>
@@ -614,13 +626,17 @@ export default function App() {
                 </CardHeader>
                 <CardContent className="flex flex-col items-center py-8 gap-8">
                   <div className="flex flex-col items-center gap-4">
-                    <div className={cn(
-                      "w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold shadow-inner",
-                      gameState.theme === 'dark' ? "bg-[#D0BCFF] text-[#381E72]" : "bg-[#6750A4] text-white"
-                    )}>
-                      {currentPlayer.name[0].toUpperCase()}
-                    </div>
-                    <h2 className="text-3xl font-extrabold font-display">{currentPlayer.name}</h2>
+                    {currentPlayer && (
+                      <>
+                        <div className={cn(
+                          "w-24 h-24 rounded-full flex items-center justify-center text-4xl font-bold shadow-inner",
+                          gameState.theme === 'dark' ? "bg-[#D0BCFF] text-[#381E72]" : "bg-[#6750A4] text-white"
+                        )}>
+                          {currentPlayer.name[0].toUpperCase()}
+                        </div>
+                        <h2 className="text-3xl font-extrabold font-display">{currentPlayer.name}</h2>
+                      </>
+                    )}
                   </div>
 
                   <div 
@@ -675,7 +691,7 @@ export default function App() {
                 </CardContent>
                 <CardFooter className="flex flex-col gap-3">
                   <Button 
-                    disabled={!gameState.revealedToCurrent}
+                    disabled={!gameState.hasRevealedOnce}
                     onClick={nextPlayer}
                     className={cn(
                       "w-full h-14 rounded-full font-bold",

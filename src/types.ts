@@ -11,6 +11,8 @@ export interface GameState {
   impostorIds: string[];
   currentPlayerIndex: number;
   revealedToCurrent: boolean;
+  hasRevealedOnce: boolean;
+  revealOrder: string[];
   category: string;
   language: 'en' | 'es';
   theme: 'light' | 'dark';
